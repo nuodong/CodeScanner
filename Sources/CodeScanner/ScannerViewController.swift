@@ -437,14 +437,35 @@ extension CodeScannerView {
 extension CodeScannerView.ScannerViewController: AVCaptureMetadataOutputObjectsDelegate {
     public func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
 
+        //Find the one containing the center point of the screen. If not found, return the first one in metadataObjects.
+                
+        var metadataObject: AVMetadataObject?
+        for object in metadataObjects {
+            guard let readableObject = object as? AVMetadataMachineReadableCodeObject else {
+                continue
+            }
 
-        guard let metadataObject = metadataObjects.first,
+            guard Self.isContainingCenterPoint(corners: readableObject.corners) else {
+                //not the one in center, ignore
+                continue
+            }
+            
+            //found the one in center
+            metadataObject = object
+            break
+        }
+                    
+        if metadataObject == nil {
+            metadataObject = metadataObjects.first
+        }
+                    
+        guard let metadataObject,
               !parentView.isPaused,
               !didFinishScanning,
               !isCapturing,
               let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject,
               let stringValue = readableObject.stringValue else {
-
+            
             return
         }
 
@@ -487,6 +508,17 @@ extension CodeScannerView.ScannerViewController: AVCaptureMetadataOutputObjectsD
         } else {
             handler?(nil)
         }
+    }
+    
+    ///whether the corners contains the center point of the screen
+    public static func isContainingCenterPoint(corners: [CGPoint]) -> Bool {
+        //in portrait mode: corner 0: bottom left, corder 1: bottom right, corner 2: top right, corner 3: top left
+        if corners[0].x <= 0.5, corners[0].y >= 0.5, corners[1].x >= 0.5, corners[1].y >= 0.5, corners[2].x >= 0.5, corners[2].y <= 0.5, corners[3].x <= 0.5, corners[3].y <= 0.5  {
+            return true
+        }
+            
+        return false
+            
     }
 }
 
